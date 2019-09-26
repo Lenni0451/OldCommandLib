@@ -10,11 +10,23 @@ import net.Lenni0451.CommandLib.utils.ArrayHelper;
 
 public class Test {
 	
+	public static class reg {
+		
+		private static Test1 test1;
+		
+	}
+	
+	public static class reg2 {
+		
+		private static Test1 test1 = null;
+		
+	}
+	
 	public static void main(String[] args) throws Throwable {
 		CommandManager manager = new CommandManager();
-		manager.addCommand(new Test1());
-		manager.addCommand(Test2.class);
-		manager.addCommand(Test3.class);
+		manager.registerLocalCommands(reg2.class);
+		manager.addCommand(Test2.class, /* This should not register */ reg.class);
+		manager.addCommand(Test3.class, /* This should not register */ reg2.class);
 
 		System.out.println(manager.callCommand("test1"));
 		System.out.println(manager.callCommand("test2"));

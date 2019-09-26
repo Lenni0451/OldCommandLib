@@ -3,6 +3,7 @@ package net.Lenni0451.CommandLib;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -51,6 +52,36 @@ public class CommandManager {
 				if(constr == null) continue;
 				commandBase = (CommandBase) constr.newInstance();
 				field.set(instance, commandBase);
+			}
+			
+			this.addCommand(commandBase);
+		}
+	}
+	
+	public void registerLocalCommands(final Class<?> clazz) throws IllegalArgumentException, IllegalAccessException, InstantiationException, InvocationTargetException {
+		Field[] fields = clazz.getDeclaredFields();
+		for(Field field : fields) {
+			if(!ICommandBase.class.isAssignableFrom(field.getType())) {
+				continue;
+			}
+			if(!Modifier.isStatic(field.getModifiers())) {
+				continue;
+			}
+			
+			field.setAccessible(true);
+			CommandBase commandBase = (CommandBase) field.get(null);
+			if(commandBase == null) {
+				Constructor<?> constr = null;
+				for(Constructor<?> constructor : field.getType().getConstructors()) {
+					if(constructor.getParameterTypes().length == 0) {
+						constr = constructor;
+						break;
+					}
+				}
+				
+				if(constr == null) continue;
+				commandBase = (CommandBase) constr.newInstance();
+				field.set(null, commandBase);
 			}
 			
 			this.addCommand(commandBase);
