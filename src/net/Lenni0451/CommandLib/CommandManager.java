@@ -27,71 +27,111 @@ public class CommandManager {
 	}
 	
 	
+	/**
+	 * Register all commands which are present as local variable in the current class instance
+	 * 
+	 * @throws IllegalArgumentException
+	 * @throws IllegalAccessException
+	 * @throws InstantiationException
+	 * @throws InvocationTargetException
+	 */
 	protected void registerLocalCommands() throws IllegalArgumentException, IllegalAccessException, InstantiationException, InvocationTargetException {
 		this.registerLocalCommands(this);
 	}
-	
+
+	/**
+	 * Register all commands which are present as local variable in the given class instance
+	 * 
+	 * @param instance The instance of the class which has commands registered as local variable
+	 * @throws IllegalArgumentException
+	 * @throws IllegalAccessException
+	 * @throws InstantiationException
+	 * @throws InvocationTargetException
+	 */
 	public void registerLocalCommands(final Object instance) throws IllegalArgumentException, IllegalAccessException, InstantiationException, InvocationTargetException {
 		Field[] fields = instance.getClass().getDeclaredFields();
 		for(Field field : fields) {
-			if(!ICommandBase.class.isAssignableFrom(field.getType())) {
-				continue;
-			}
-			
-			field.setAccessible(true);
-			CommandBase commandBase = (CommandBase) field.get(instance);
-			if(commandBase == null) {
-				Constructor<?> constr = null;
-				for(Constructor<?> constructor : field.getType().getConstructors()) {
-					if(constructor.getParameterTypes().length == 0) {
-						constr = constructor;
-						break;
+			if(CommandBase.class.isAssignableFrom(field.getType())) {
+				field.setAccessible(true);
+				CommandBase commandBase = (CommandBase) field.get(instance);
+				if(commandBase == null) {
+					Constructor<?> constr = null;
+					for(Constructor<?> constructor : field.getType().getConstructors()) {
+						if(constructor.getParameterTypes().length == 0) {
+							constr = constructor;
+							break;
+						}
 					}
+					
+					if(constr == null) continue;
+					commandBase = (CommandBase) constr.newInstance();
+					field.set(instance, commandBase);
 				}
 				
-				if(constr == null) continue;
-				commandBase = (CommandBase) constr.newInstance();
-				field.set(instance, commandBase);
+				this.addCommand(commandBase);
+			} else {
+				this.addCommand(field.getType());
 			}
-			
-			this.addCommand(commandBase);
 		}
 	}
 	
+	/**
+	 * Register all commands which are present as local variable in the given class
+	 * 
+	 * @param clazz The class which has all commands as local variables
+	 * @throws IllegalArgumentException
+	 * @throws IllegalAccessException
+	 * @throws InstantiationException
+	 * @throws InvocationTargetException
+	 */
 	public void registerLocalCommands(final Class<?> clazz) throws IllegalArgumentException, IllegalAccessException, InstantiationException, InvocationTargetException {
 		Field[] fields = clazz.getDeclaredFields();
 		for(Field field : fields) {
-			if(!ICommandBase.class.isAssignableFrom(field.getType())) {
-				continue;
-			}
 			if(!Modifier.isStatic(field.getModifiers())) {
 				continue;
 			}
-			
-			field.setAccessible(true);
-			CommandBase commandBase = (CommandBase) field.get(null);
-			if(commandBase == null) {
-				Constructor<?> constr = null;
-				for(Constructor<?> constructor : field.getType().getConstructors()) {
-					if(constructor.getParameterTypes().length == 0) {
-						constr = constructor;
-						break;
+			if(CommandBase.class.isAssignableFrom(field.getType())) {
+				field.setAccessible(true);
+				CommandBase commandBase = (CommandBase) field.get(null);
+				if(commandBase == null) {
+					Constructor<?> constr = null;
+					for(Constructor<?> constructor : field.getType().getConstructors()) {
+						if(constructor.getParameterTypes().length == 0) {
+							constr = constructor;
+							break;
+						}
 					}
+					
+					if(constr == null) continue;
+					commandBase = (CommandBase) constr.newInstance();
+					field.set(null, commandBase);
 				}
 				
-				if(constr == null) continue;
-				commandBase = (CommandBase) constr.newInstance();
-				field.set(null, commandBase);
+				this.addCommand(commandBase);
+			} else {
+				this.addCommand(field.getType());
 			}
-			
-			this.addCommand(commandBase);
 		}
 	}
 	
+	/**
+	 * Register a Command extending CommandBase
+	 * 
+	 * @param command The command to add to the list
+	 */
 	public void addCommand(final CommandBase command) {
 		this.registeredCommands.add(command);
 	}
 	
+	/**
+	 * Register a command with the @ACommand annotation
+	 * 
+	 * @param clazzes The classes which may have the @ACommand annotation.<br>If a class does not have the annotation it will get skipped without exceptions.
+	 * @throws InstantiationException
+	 * @throws IllegalAccessException
+	 * @throws IllegalArgumentException
+	 * @throws InvocationTargetException
+	 */
 	public void addCommand(final Class<?>... clazzes) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 		for(Class<?> clazz : clazzes) {
 			if(!clazz.isAnnotationPresent(ACommand.class)) {
@@ -135,14 +175,30 @@ public class CommandManager {
 	}
 	
 	
+	/**
+	 * Get a copy of the list with all commands
+	 * 
+	 * @return copy of registeredCommands
+	 */
 	public List<CommandBase> getCommands() {
 		return new ArrayList<>(this.registeredCommands);
 	}
 	
+	/**
+	 * Get the count of registered commands
+	 * 
+	 * @return command count
+	 */
 	public int getCommandCount() {
 		return this.registeredCommands.size();
 	}
 	
+	/**
+	 * Get a command instance by the name of the command
+	 * 
+	 * @param name of the command
+	 * @return the command instance
+	 */
 	public CommandBase getCommandByName(final String name) {
 		for(CommandBase commandBase : this.registeredCommands) {
 			if(commandBase.getName().equalsIgnoreCase(name)) {
@@ -152,6 +208,12 @@ public class CommandManager {
 		return null;
 	}
 	
+	/**
+	 * Get a command instance by the name or alias of the command
+	 * 
+	 * @param name or alias of the command
+	 * @return the command instance
+	 */
 	public CommandBase getCommandByNameOrAlias(final String name) {
 		for(CommandBase commandBase : this.registeredCommands) {
 			if(commandBase.getName().equalsIgnoreCase(name) || commandBase.getAliases().contains(name.toLowerCase())) {
@@ -161,6 +223,12 @@ public class CommandManager {
 		return null;
 	}
 	
+	/**
+	 * Get a command instance by its class
+	 * 
+	 * @param clazz of the command instance
+	 * @return the command instance
+	 */
 	public CommandBase getCommandByClass(final Class<?> clazz) {
 		for(CommandBase commandBase : this.registeredCommands) {
 			if(commandBase instanceof ReflectedCommand) {
@@ -175,6 +243,12 @@ public class CommandManager {
 	}
 	
 	
+	/**
+	 * Call the given command with arguments
+	 * 
+	 * @param text which a user entered to execute a command
+	 * @return if the command was executed successfully
+	 */
 	public boolean callCommand(final String text) {
 		String commandName = text.split(" ")[0];
 		String[] rawArgs = text.split(" ");
@@ -190,6 +264,12 @@ public class CommandManager {
 		return false;
 	}
 	
+	/**
+	 * Get a list with all tab completions which are available at the current state
+	 * 
+	 * @param text which a user entered and is trying to tab complete now
+	 * @return the list with possible tab completions
+	 */
 	public List<String> callTabComplete(final String text) {
 		List<String> tabCompletions = new ArrayList<>();
 		
