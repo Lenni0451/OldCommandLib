@@ -322,7 +322,7 @@ public class CommandManager {
 			}
 		}
 		
-		{
+		if(!text.endsWith(" ")) {
 			rawArgs = text.split(" ");
 			
 			Iterator<String> iterator = tabCompletions.iterator();
